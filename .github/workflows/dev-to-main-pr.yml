@@ -13,24 +13,40 @@ jobs:
   create_pr:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          # Fetch all history and tags for git-describe
+          fetch-depth: 0
 
-      - name: Create or Update Pull Request
+      - name: Check for Existing Pull Request
+        id: check_pr
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Check if a PR already exists
-          EXISTING_PR=$(gh pr list --base main --head dev --state open --json url -q '.[0].url')
-
-          if [ -z "$EXISTING_PR" ]; then
-            echo "No existing PR found. Creating a new one."
-            gh pr create \
-              --base main \
-              --head dev \
-              --title "chore(release): Merge dev into main" \
-              --body "This PR is automatically generated and contains the latest changes from the dev branch."
+          if gh pr list --base main --head dev --state open | grep -q '.'; then
+            echo "An open PR from dev to main already exists."
+            echo "exists=true" >> $GITHUB_OUTPUT
           else
-            echo "A PR already exists: $EXISTING_PR"
-            echo "Pushes to 'dev' will automatically update this PR."
+            echo "No open PR found. Will create one."
+            echo "exists=false" >> $GITHUB_OUTPUT
           fi
+
+      - name: Generate Pull Request Title
+        id: generate_title
+        if: steps.check_pr.outputs.exists == 'false'
+        run: |
+          # Use the latest tag description, or 'v0.0.1' as a fallback.
+          VERSION_INFO=$(git describe --tags 2>/dev/null || echo "v0.0.1")
+          echo "title=chore(release): based on ${VERSION_INFO}" >> $GITHUB_OUTPUT
+
+      - name: Create Pull Request
+        if: steps.check_pr.outputs.exists == 'false'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr create \
+            --base main \
+            --head dev \
+            --title "${{ steps.generate_title.outputs.title }}" \
+            --body "This PR is automatically generated and contains the latest changes from the dev branch."
