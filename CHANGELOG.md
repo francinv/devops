@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.1.2](https://github.com/francinv/devops/compare/v0.1.1...v0.1.2) (2025-08-11)
+
+
+### 🐛 Bug Fixes
+
+* correct verison in PR generation ([f55e40f](https://github.com/francinv/devops/commit/f55e40f1325802708b6cf6d18695fdbd833c2b9c))
+
+
+### 🔧 Miscellaneous
+
+* do not include release commit ([3098c63](https://github.com/francinv/devops/commit/3098c63957e47245ece59431ae341c3106d65d62))
+* **release:** v0.1.1-1-gf55e40f ([9c522cd](https://github.com/francinv/devops/commit/9c522cda2619a64fb023ff1e615f85a52d364e3d))
+* trigger on tag push ([913d4b1](https://github.com/francinv/devops/commit/913d4b1cfc78c26308483b43c9ed460fb43d5a0b))
+
 ## [0.1.1](https://github.com/francinv/devops/compare/v0.1.0...v0.1.1) (2025-08-11)
 
 
