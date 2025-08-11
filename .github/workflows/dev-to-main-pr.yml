@@ -1,4 +1,4 @@
-name: Create Dev to Main PR
+name: Create Release PR
 
 on:
   push:
@@ -13,14 +13,18 @@ jobs:
   create-pull-request:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: create pull request
+      - name: Create Pull Request
         uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: "Update main with latest changes from dev"
+          commit-message: "chore(release): update release PR"
           title: "Release"
-          body: "This PR is auto-generated and contains the latest changes from the dev branch."
-          branch: "dev-to-main"
+          body: "This PR is auto-generated and contains the latest changes from the dev branch for the next release."
+          branch: "release/main"
           base: "main"
+          update-existing: true
