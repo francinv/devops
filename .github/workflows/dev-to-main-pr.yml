@@ -38,7 +38,7 @@ jobs:
         run: |
           # Use the latest tag description, or 'v0.0.1' as a fallback.
           VERSION_INFO=$(git describe --tags 2>/dev/null || echo "v0.0.1")
-          echo "title=chore(release): based on ${VERSION_INFO}" >> $GITHUB_OUTPUT
+          echo "title=chore(release): ${VERSION_INFO}" >> $GITHUB_OUTPUT
 
       - name: Create Pull Request
         if: steps.check_pr.outputs.exists == 'false'
