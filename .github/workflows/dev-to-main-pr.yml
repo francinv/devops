@@ -66,7 +66,7 @@ jobs:
           else
             VERSION_INFO=$LATEST_TAG
           fi
-          echo "title=chore(release): ${VERSION_INFO}" >> $GITHUB_OUTPUT
+          echo "title=release: ${VERSION_INFO}" >> $GITHUB_OUTPUT
 
           # Generate Body content using our custom configuration file.
           CHANGELOG=$(git log origin/main..dev --pretty=format:'%B%n- - -%n' | conventional-changelog -p angular --config ./.changelog-config.js)
