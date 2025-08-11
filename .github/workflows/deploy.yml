@@ -1,0 +1,47 @@
+name: publish-image
+
+# Triggers when a new release is published, or can be run manually.
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-upload-image:
+    name: Build and upload image
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          # On a release, this checks out the specific tag.
+          # On a manual dispatch, this is empty and checkout uses the selected branch.
+          ref: ${{ github.event.release.tag_name }}
+          # Fetch all history and tags so git describe works correctly.
+          fetch-depth: 0
+
+      - name: Generate image tag
+        id: image_tag
+        run: |
+          if [[ "${{ github.event_name }}" == "release" ]]; then
+            # For releases, use the exact release tag.
+            TAG=${{ github.event.release.tag_name }}
+          else
+            # For manual runs, generate a descriptive tag (e.g., v0.1.0-13-ge68a21c).
+            TAG=$(git describe --tags)
+          fi
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+
+      - name: Build and push image
+        run: |
+          echo "Building and pushing image"
+          echo "Image tag: ${{ steps.image_tag.outputs.tag }}"

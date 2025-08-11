@@ -1,4 +1,4 @@
-name: Create or Update Dev to Main PR
+name: Merge Dev to Main
 
 on:
   push:

@@ -7,15 +7,11 @@
 const types = [
   { type: "feat", section: "✨ Features" },
   { type: "fix", section: "🐛 Bug Fixes" },
-  { type: "chore", section: "🧹 Miscellaneous Tasks", hidden: false },
-  { type: "docs", section: "📝 Documentation", hidden: false },
-  { type: "style", section: "💄 Styles", hidden: false },
-  { type: "refactor", section: "♻️ Code Refactoring", hidden: false },
   { type: "perf", section: "⚡ Performance Improvements", hidden: false },
-  { type: "test", section: "✅ Tests", hidden: false },
-  { type: "build", section: "📦 Build System", hidden: false },
-  { type: "ci", section: "🎡 Continuous Integration", hidden: false },
+  { type: "deps", section: "📦 Dependencies", hidden: false },
   { type: "revert", section: "⏪ Reverts", hidden: false },
+  { type: "docs", section: "📝 Documentation", hidden: false },
+  { type: "chore", section: "🧹 Miscellaneous", hidden: false },
 ];
 
 module.exports = {
