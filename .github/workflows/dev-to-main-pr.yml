@@ -46,7 +46,7 @@ jobs:
         id: generate_content
         run: |
           # Generate Title
-          VERSION_INFO=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.1")
+          VERSION_INFO=$(git describe --tags 2>/dev/null || echo "v0.0.1")
           echo "title=chore(release): ${VERSION_INFO}" >> $GITHUB_OUTPUT
 
           # Generate Body content and store in a temporary file for safety
