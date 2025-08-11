@@ -1,0 +1,90 @@
+name: Merge Dev to Main
+
+on:
+  push:
+    branches:
+      - dev
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  create_or_update_pr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          # Fetch all history so we can compare branches and generate a changelog
+          fetch-depth: 0
+
+      - name: Fetch main branch for comparison
+        run: git fetch origin main
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Changelog Generator
+        run: npm install -g conventional-changelog-cli
+
+      - name: Find Existing Pull Request
+        id: find_pr
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_NUMBER=$(gh pr list --base main --head dev --state open --json number -q '.[0].number' || echo "")
+          if [ -n "$PR_NUMBER" ]; then
+            echo "Found existing PR: #$PR_NUMBER"
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "number=$PR_NUMBER" >> $GITHUB_OUTPUT
+          else
+            echo "No open PR found."
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate PR Title and Body
+        id: generate_content
+        run: |
+          set -e
+          # Generate Title
+          VERSION_INFO=$(git describe --tags 2>/dev/null || echo "v0.0.1")
+          echo "title=chore(release): ${VERSION_INFO}" >> $GITHUB_OUTPUT
+
+          # Generate Body content using our custom configuration file.
+          # The format '%B%n- - -%n' is used to separate commits for the parser.
+          CHANGELOG=$(git log origin/main..dev --pretty=format:'%B%n- - -%n' | conventional-changelog -p angular --config ./.changelog-config.js)
+
+          BODY_INTRO="This PR is automatically generated and contains the latest changes from the dev branch."
+          # Use a different variable for the final body to avoid conflicts
+          FINAL_BODY=$(printf "%s\n\n%s" "$BODY_INTRO" "$CHANGELOG")
+
+          # Save the body to the step's output
+          {
+            echo 'body<<EOF'
+            echo "$FINAL_BODY"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Create or Update Pull Request
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_TITLE: ${{ steps.generate_content.outputs.title }}
+          PR_BODY: ${{ steps.generate_content.outputs.body }}
+        run: |
+          if [ "${{ steps.find_pr.outputs.exists }}" == "true" ]; then
+            PR_NUMBER=${{ steps.find_pr.outputs.number }}
+            echo "Updating existing PR #${PR_NUMBER}"
+            gh pr edit "$PR_NUMBER" \
+              --title "$PR_TITLE" \
+              --body "$PR_BODY"
+          else
+            echo "Creating new PR"
+            gh pr create \
+              --base main \
+              --head dev \
+              --title "$PR_TITLE" \
+              --body "$PR_BODY"
+          fi
