@@ -7,7 +7,7 @@
 const types = [
   { type: "feat", section: "✨ Features" },
   { type: "fix", section: "🐛 Bug Fixes" },
-  { type: "chore", section: "Miscellaneous Tasks", hidden: false },
+  { type: "chore", section: "🧹 Miscellaneous Tasks", hidden: false },
   { type: "docs", section: "📝 Documentation", hidden: false },
   { type: "style", section: "💄 Styles", hidden: false },
   { type: "refactor", section: "♻️ Code Refactoring", hidden: false },
