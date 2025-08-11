@@ -38,7 +38,7 @@ jobs:
             echo "exists=true" >> $GITHUB_OUTPUT
             echo "number=$PR_NUMBER" >> $GITHUB_OUTPUT
           else
-            echo "No open PR found. Will create one."
+            echo "No open PR found."
             echo "exists=false" >> $GITHUB_OUTPUT
           fi
 
@@ -49,31 +49,35 @@ jobs:
           VERSION_INFO=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.1")
           echo "title=chore(release): ${VERSION_INFO}" >> $GITHUB_OUTPUT
 
-          # Generate Body
-          # This command creates a changelog for all commits that are in 'dev' but not in 'main'
-          BODY_CONTENT=$(conventional-changelog --preset angular --commit-path . --compare-url "https://github.com/${{ github.repository }}/compare/main...dev")
-          echo "body<<EOF" >> $GITHUB_OUTPUT
-          echo -e "This PR is automatically generated and contains the latest changes from the dev branch.\n\n$BODY_CONTENT" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          # Generate Body content and store in a temporary file for safety
+          CHANGELOG=$(conventional-changelog -p angular -i /dev/null -s --commit-path .)
+          BODY_INTRO="This PR is automatically generated and contains the latest changes from the dev branch."
+          printf "%s\n\n%s" "$BODY_INTRO" "$CHANGELOG" > pr_body.md
+
+          # Save the body to the step's output, using a heredoc marker
+          {
+            echo 'body<<EOF'
+            cat pr_body.md
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
 
       - name: Create or Update Pull Request
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_TITLE: ${{ steps.generate_content.outputs.title }}
+          PR_BODY: ${{ steps.generate_content.outputs.body }}
         run: |
           if [ "${{ steps.find_pr.outputs.exists }}" == "true" ]; then
-            echo "Updating existing PR #${{ steps.find_pr.outputs.number }}"
-            gh pr edit ${{ steps.find_pr.outputs.number }} \
-              --title "${{ steps.generate_content.outputs.title }}" \
-              --body-file - <<-EOF
-              ${{ steps.generate_content.outputs.body }}
-              EOF
+            PR_NUMBER=${{ steps.find_pr.outputs.number }}
+            echo "Updating existing PR #${PR_NUMBER}"
+            gh pr edit "$PR_NUMBER" \
+              --title "$PR_TITLE" \
+              --body "$PR_BODY"
           else
             echo "Creating new PR"
             gh pr create \
               --base main \
               --head dev \
-              --title "${{ steps.generate_content.outputs.title }}" \
-              --body-file - <<-EOF
-              ${{ steps.generate_content.outputs.body }}
-              EOF
+              --title "$PR_TITLE" \
+              --body "$PR_BODY"
           fi
