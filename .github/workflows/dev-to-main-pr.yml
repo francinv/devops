@@ -53,10 +53,9 @@ jobs:
           VERSION_INFO=$(git describe --tags 2>/dev/null || echo "v0.0.1")
           echo "title=chore(release): ${VERSION_INFO}" >> $GITHUB_OUTPUT
 
-          # Generate Body content by piping the correct commit range to the generator.
-          # This is more reliable than letting the tool guess the commit range.
+          # Generate Body content using our custom configuration file.
           # The format '%B%n- - -%n' is used to separate commits for the parser.
-          CHANGELOG=$(git log origin/main..dev --pretty=format:'%B%n- - -%n' | conventional-changelog -p angular)
+          CHANGELOG=$(git log origin/main..dev --pretty=format:'%B%n- - -%n' | conventional-changelog -p angular --config ./.changelog-config.js)
 
           BODY_INTRO="This PR is automatically generated and contains the latest changes from the dev branch."
           # Use a different variable for the final body to avoid conflicts
