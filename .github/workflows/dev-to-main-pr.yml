@@ -22,5 +22,5 @@ jobs:
           commit-message: "Update main with latest changes from dev"
           title: "Release"
           body: "This PR is auto-generated and contains the latest changes from the dev branch."
-          branch: "dev"
+          branch: "dev-to-main"
           base: "main"
