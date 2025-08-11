@@ -16,8 +16,16 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          # Fetch all history and tags for git-describe
+          # Fetch all history so we can compare branches and generate a changelog
           fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Changelog Generator
+        run: npm install -g conventional-changelog-cli
 
       - name: Find Existing Pull Request
         id: find_pr
@@ -34,28 +42,38 @@ jobs:
             echo "exists=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Generate Pull Request Title
-        id: generate_title
+      - name: Generate PR Title and Body
+        id: generate_content
         run: |
-          # Use the latest tag description, or 'v0.0.1' as a fallback.
-          VERSION_INFO=$(git describe --tags 2>/dev/null || echo "v0.0.1")
+          # Generate Title
+          VERSION_INFO=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.1")
           echo "title=chore(release): ${VERSION_INFO}" >> $GITHUB_OUTPUT
 
-      - name: Create Pull Request
-        if: steps.find_pr.outputs.exists == 'false'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh pr create \
-            --base main \
-            --head dev \
-            --title "${{ steps.generate_title.outputs.title }}" \
-            --body "This PR is automatically generated and contains the latest changes from the dev branch."
+          # Generate Body
+          # This command creates a changelog for all commits that are in 'dev' but not in 'main'
+          BODY_CONTENT=$(conventional-changelog --preset angular --commit-path . --compare-url "https://github.com/${{ github.repository }}/compare/main...dev")
+          echo "body<<EOF" >> $GITHUB_OUTPUT
+          echo -e "This PR is automatically generated and contains the latest changes from the dev branch.\n\n$BODY_CONTENT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
-      - name: Update Pull Request Title
-        if: steps.find_pr.outputs.exists == 'true'
+      - name: Create or Update Pull Request
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh pr edit ${{ steps.find_pr.outputs.number }} \
-            --title "${{ steps.generate_title.outputs.title }}"
+          if [ "${{ steps.find_pr.outputs.exists }}" == "true" ]; then
+            echo "Updating existing PR #${{ steps.find_pr.outputs.number }}"
+            gh pr edit ${{ steps.find_pr.outputs.number }} \
+              --title "${{ steps.generate_content.outputs.title }}" \
+              --body-file - <<-EOF
+              ${{ steps.generate_content.outputs.body }}
+              EOF
+          else
+            echo "Creating new PR"
+            gh pr create \
+              --base main \
+              --head dev \
+              --title "${{ steps.generate_content.outputs.title }}" \
+              --body-file - <<-EOF
+              ${{ steps.generate_content.outputs.body }}
+              EOF
+          fi
