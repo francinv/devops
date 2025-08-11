@@ -1,9 +1,10 @@
 name: publish-image
 
-# Triggers when a new release is published, or can be run manually.
+# Triggers when a tag is pushed, or can be run manually.
 on:
-  release:
-    types: [published]
+  push:
+    tags:
+      - "v*" # Trigger on version tags like v1.0.0
   workflow_dispatch:
 
 permissions:
@@ -23,20 +24,20 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          # On a release, this checks out the specific tag.
-          # On a manual dispatch, this is empty and checkout uses the selected branch.
-          ref: ${{ github.event.release.tag_name }}
+          # This automatically checks out the correct ref for each event type
+          # (release tag, pushed tag, or selected branch for manual runs).
           # Fetch all history and tags so git describe works correctly.
           fetch-depth: 0
 
       - name: Generate image tag
         id: image_tag
         run: |
-          if [[ "${{ github.event_name }}" == "release" ]]; then
-            # For releases, use the exact release tag.
-            TAG=${{ github.event.release.tag_name }}
+          TAG=""
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            # For tag pushes, use the tag name that triggered the workflow.
+            TAG=${{ github.ref_name }}
           else
-            # For manual runs, generate a descriptive tag (e.g., v0.1.0-13-ge68a21c).
+            # For manual (workflow_dispatch) runs, generate a descriptive dev tag.
             TAG=$(git describe --tags)
           fi
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
