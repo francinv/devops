@@ -45,19 +45,24 @@ jobs:
       - name: Generate PR Title and Body
         id: generate_content
         run: |
+          set -e
           # Generate Title
           VERSION_INFO=$(git describe --tags 2>/dev/null || echo "v0.0.1")
           echo "title=chore(release): ${VERSION_INFO}" >> $GITHUB_OUTPUT
 
-          # Generate Body content and store in a temporary file for safety
-          CHANGELOG=$(conventional-changelog -p angular -i /dev/null -s --commit-path .)
-          BODY_INTRO="This PR is automatically generated and contains the latest changes from the dev branch."
-          printf "%s\n\n%s" "$BODY_INTRO" "$CHANGELOG" > pr_body.md
+          # Generate Body content by piping the correct commit range to the generator.
+          # This is more reliable than letting the tool guess the commit range.
+          # The format '%B%n- - -%n' is used to separate commits for the parser.
+          CHANGELOG=$(git log main..dev --pretty=format:'%B%n- - -%n' | conventional-changelog -p angular)
 
-          # Save the body to the step's output, using a heredoc marker
+          BODY_INTRO="This PR is automatically generated and contains the latest changes from the dev branch."
+          # Use a different variable for the final body to avoid conflicts
+          FINAL_BODY=$(printf "%s\n\n%s" "$BODY_INTRO" "$CHANGELOG")
+
+          # Save the body to the step's output
           {
             echo 'body<<EOF'
-            cat pr_body.md
+            echo "$FINAL_BODY"
             echo 'EOF'
           } >> "$GITHUB_OUTPUT"
 
