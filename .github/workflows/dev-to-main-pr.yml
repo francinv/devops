@@ -1,0 +1,22 @@
+name: Create Dev to Main PR
+
+on:
+  push:
+    branches:
+      - dev
+
+jobs:
+  create-pull-request:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: create pull request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "Update main with latest changes from dev"
+          title: "Release"
+          body: "This PR is auto-generated and contains the latest changes from the dev branch."
+          branch: "dev-to-main"
+          base: "main"
