@@ -19,6 +19,9 @@ jobs:
           # Fetch all history so we can compare branches and generate a changelog
           fetch-depth: 0
 
+      - name: Fetch main branch for comparison
+        run: git fetch origin main
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -53,7 +56,7 @@ jobs:
           # Generate Body content by piping the correct commit range to the generator.
           # This is more reliable than letting the tool guess the commit range.
           # The format '%B%n- - -%n' is used to separate commits for the parser.
-          CHANGELOG=$(git log main..dev --pretty=format:'%B%n- - -%n' | conventional-changelog -p angular)
+          CHANGELOG=$(git log origin/main..dev --pretty=format:'%B%n- - -%n' | conventional-changelog -p angular)
 
           BODY_INTRO="This PR is automatically generated and contains the latest changes from the dev branch."
           # Use a different variable for the final body to avoid conflicts
