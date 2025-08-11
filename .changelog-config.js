@@ -21,45 +21,49 @@ const types = [
 module.exports = {
   writerOpts: {
     transform: (commit, context) => {
-      // Find the type configuration for the current commit
       const typeConfig = types.find((type) => type.type === commit.type);
 
-      // If the commit type is not in our list, skip it
       if (!typeConfig) {
         return null;
       }
 
+      // Create a new mutable object to avoid modifying the original immutable commit
+      const newCommit = { ...commit };
+
       // Set the commit's display type to the section title (e.g., '✨ Features')
-      commit.type = typeConfig.section;
+      newCommit.type = typeConfig.section;
 
       // Standard transformations for linking issues and users
-      if (commit.scope === `*`) {
-        commit.scope = ``;
+      if (newCommit.scope === `*`) {
+        newCommit.scope = ``;
       }
-      if (typeof commit.hash === `string`) {
-        commit.shortHash = commit.hash.substring(0, 7);
+      if (typeof newCommit.hash === `string`) {
+        newCommit.shortHash = newCommit.hash.substring(0, 7);
       }
-      if (typeof commit.subject === `string`) {
+      if (typeof newCommit.subject === `string`) {
         let url = context.repository
           ? `${context.host}/${context.owner}/${context.repository}`
           : context.repoUrl;
         if (url) {
           url = `${url}/issues/`;
           // Issue URLs.
-          commit.subject = commit.subject.replace(/#([0-9]+)/g, (_, issue) => {
-            return `[#${issue}](${url}${issue})`;
-          });
+          newCommit.subject = newCommit.subject.replace(
+            /#([0-9]+)/g,
+            (_, issue) => {
+              return `[#${issue}](${url}${issue})`;
+            }
+          );
         }
         if (context.host) {
           // User URLs.
-          commit.subject = commit.subject.replace(
+          newCommit.subject = newCommit.subject.replace(
             /\B@([a-z0-9](?:-?[a-z0-9]){0,38})/g,
             `[@$1](${context.host}/$1)`
           );
         }
       }
 
-      return commit;
+      return newCommit;
     },
     // Group commits by the 'type' field we just transformed
     groupBy: "type",
