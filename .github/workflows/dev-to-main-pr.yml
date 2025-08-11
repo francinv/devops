@@ -15,12 +15,12 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-        with:
-          # Fetch all history so we can compare branches and generate a changelog
-          fetch-depth: 0
 
-      - name: Fetch main branch for comparison
-        run: git fetch origin main
+      - name: Fetch main branch and all tags
+        run: |
+          git config remote.origin.url "https://github.com/${{ github.repository }}"
+          git fetch origin main:main --force
+          git fetch origin --tags --force
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -49,16 +49,29 @@ jobs:
         id: generate_content
         run: |
           set -e
-          # Generate Title
-          VERSION_INFO=$(git describe --tags 2>/dev/null || echo "v0.0.1")
+          # Manually construct the version string for the title, which is more reliable.
+          # 1. Get the latest tag from the main branch. Use --abbrev=0 for a clean tag.
+          LATEST_TAG=$(git describe --tags --abbrev=0 origin/main 2>/dev/null || echo "v0.0.0")
+
+          # 2. Count the number of commits between main and dev.
+          COMMIT_COUNT=$(git rev-list --count origin/main..dev)
+
+          # 3. Get the short hash of the latest commit on dev.
+          SHORT_HASH=$(git rev-parse --short dev)
+
+          # 4. Combine them into a git-describe-like string.
+          # If there are no new commits, just use the latest tag.
+          if [ "$COMMIT_COUNT" -gt 0 ]; then
+            VERSION_INFO="${LATEST_TAG}-${COMMIT_COUNT}-g${SHORT_HASH}"
+          else
+            VERSION_INFO=$LATEST_TAG
+          fi
           echo "title=chore(release): ${VERSION_INFO}" >> $GITHUB_OUTPUT
 
           # Generate Body content using our custom configuration file.
-          # The format '%B%n- - -%n' is used to separate commits for the parser.
           CHANGELOG=$(git log origin/main..dev --pretty=format:'%B%n- - -%n' | conventional-changelog -p angular --config ./.changelog-config.js)
 
           BODY_INTRO="This PR is automatically generated and contains the latest changes from the dev branch."
-          # Use a different variable for the final body to avoid conflicts
           FINAL_BODY=$(printf "%s\n\n%s" "$BODY_INTRO" "$CHANGELOG")
 
           # Save the body to the step's output
