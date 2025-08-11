@@ -1,4 +1,4 @@
-name: Create Dev to Main PR
+name: Create or Update Dev to Main PR
 
 on:
   push:
@@ -10,7 +10,7 @@ permissions:
   pull-requests: write
 
 jobs:
-  create_pr:
+  create_or_update_pr:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -19,14 +19,16 @@ jobs:
           # Fetch all history and tags for git-describe
           fetch-depth: 0
 
-      - name: Check for Existing Pull Request
-        id: check_pr
+      - name: Find Existing Pull Request
+        id: find_pr
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if gh pr list --base main --head dev --state open | grep -q '.'; then
-            echo "An open PR from dev to main already exists."
+          PR_NUMBER=$(gh pr list --base main --head dev --state open --json number -q '.[0].number' || echo "")
+          if [ -n "$PR_NUMBER" ]; then
+            echo "Found existing PR: #$PR_NUMBER"
             echo "exists=true" >> $GITHUB_OUTPUT
+            echo "number=$PR_NUMBER" >> $GITHUB_OUTPUT
           else
             echo "No open PR found. Will create one."
             echo "exists=false" >> $GITHUB_OUTPUT
@@ -34,14 +36,13 @@ jobs:
 
       - name: Generate Pull Request Title
         id: generate_title
-        if: steps.check_pr.outputs.exists == 'false'
         run: |
           # Use the latest tag description, or 'v0.0.1' as a fallback.
           VERSION_INFO=$(git describe --tags 2>/dev/null || echo "v0.0.1")
           echo "title=chore(release): ${VERSION_INFO}" >> $GITHUB_OUTPUT
 
       - name: Create Pull Request
-        if: steps.check_pr.outputs.exists == 'false'
+        if: steps.find_pr.outputs.exists == 'false'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -50,3 +51,11 @@ jobs:
             --head dev \
             --title "${{ steps.generate_title.outputs.title }}" \
             --body "This PR is automatically generated and contains the latest changes from the dev branch."
+
+      - name: Update Pull Request Title
+        if: steps.find_pr.outputs.exists == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr edit ${{ steps.find_pr.outputs.number }} \
+            --title "${{ steps.generate_title.outputs.title }}"
